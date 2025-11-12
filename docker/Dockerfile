@@ -1,27 +1,27 @@
-FROM node:20-alpine
-
-# Install dependencies required for Prisma
-RUN apk add --no-cache bash openssl libstdc++ libc6-compat
+# Debian-based image – fully compatible with Prisma binaries
+FROM node:20-bullseye-slim
 
 WORKDIR /app
 
-# Copy package files
+# Copy dependency files first
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
+# Install system deps Prisma needs (OpenSSL etc.)
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Install Node dependencies
 RUN npm ci
 
-# Copy source code
+# Copy all source code
 COPY . .
 
-# Generate Prisma Client
+# Generate Prisma client inside the same environment
 RUN npx prisma generate
 
-# Build TypeScript
+# Build TypeScript to dist/
 RUN npm run build
 
-# Expose port
 EXPOSE 3000
 
 # Start server

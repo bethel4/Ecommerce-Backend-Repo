@@ -53,10 +53,7 @@ services:
       CSRF_SECRET: ${CSRF_SECRET:-your-csrf-secret-key-change-in-production}
     ports:
       - "3000:3000"
-    volumes:
-      - ../src:/app/src
-      - ../prisma:/app/prisma
-    command: sh -c "npx prisma migrate deploy && npm run start"
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
 
 volumes:
   postgres_data:
