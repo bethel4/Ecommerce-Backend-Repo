@@ -8,7 +8,8 @@ export class ProductEntity {
     public category: string | null,
     public userId: string,
     public createdAt: Date,
-    public updatedAt: Date
+    public updatedAt: Date,
+    public imageUrl?: string | null
   ) {}
 }
 

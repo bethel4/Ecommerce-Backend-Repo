@@ -13,6 +13,114 @@ export function getSwaggerDocument() {
       contact: {
         name: 'API Support',
       },
+      '/api/products/{id}': {
+        get: {
+          tags: ['Products'],
+          summary: 'Get product details',
+          description: 'Retrieve full details for a specific product by id.',
+          operationId: 'getProduct',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Product found',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/BaseResponse' },
+                },
+              },
+            },
+            '404': {
+              description: 'Product not found',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+        put: {
+          tags: ['Products'],
+          summary: 'Update product (Admin only)',
+          description: 'Update any subset of fields for a product. Requires Admin role.',
+          operationId: 'updateProduct',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    description: { type: 'string' },
+                    price: { type: 'number', minimum: 0.01 },
+                    stock: { type: 'integer', minimum: 0 },
+                    category: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Product updated successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/BaseResponse' },
+                },
+              },
+            },
+            '400': { description: 'Validation error', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '404': { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+        delete: {
+          tags: ['Products'],
+          summary: 'Delete product (Admin only)',
+          description: 'Permanently delete a product. Requires Admin role.',
+          operationId: 'deleteProduct',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Product deleted successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/BaseResponse' },
+                },
+              },
+            },
+            '401': { description: 'Unauthorized', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '403': { description: 'Forbidden', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '404': { description: 'Product not found', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+          },
+        },
+      },
     },
     servers: [
       {
@@ -104,18 +212,22 @@ export function getSwaggerDocument() {
               type: 'string',
               minLength: 3,
               maxLength: 50,
-              example: 'johndoe',
+              pattern: '^[a-zA-Z0-9]+$',
+              example: 'johndoe123',
+              description: 'Username must be alphanumeric only (letters and numbers, no special characters or spaces)',
             },
             email: {
               type: 'string',
               format: 'email',
               example: 'john.doe@example.com',
+              description: 'Must be a valid email address format (e.g., user@example.com). Must be unique.',
             },
             password: {
               type: 'string',
-              minLength: 6,
+              minLength: 8,
               format: 'password',
-              example: 'securePassword123',
+              example: 'SecurePass123!',
+              description: 'Password must be at least 8 characters long and include: at least one uppercase letter (A-Z), at least one lowercase letter (a-z), at least one number (0-9), and at least one special character (e.g., !@#$%^&*)',
             },
           },
         },
@@ -288,11 +400,11 @@ export function getSwaggerDocument() {
       },
     },
     paths: {
-      '/api/auth/register': {
+      '/auth/register': {
         post: {
           tags: ['Authentication'],
           summary: 'Register a new user',
-          description: 'Register a new user account. Upon successful registration, returns a 201 Created status code. Sensitive information like passwords are never returned in the response.',
+          description: 'Register a new user account. Rate limited (100 requests / 15 minutes per IP). Upon success returns 201. Passwords are never returned.',
           operationId: 'registerUser',
           requestBody: {
             required: true,
@@ -304,10 +416,27 @@ export function getSwaggerDocument() {
                 examples: {
                   valid: {
                     value: {
-                      username: 'johndoe',
+                      username: 'johndoe123',
                       email: 'john.doe@example.com',
-                      password: 'securePassword123',
+                      password: 'SecurePass123!',
                     },
+                    summary: 'Valid registration request',
+                  },
+                  invalidUsername: {
+                    value: {
+                      username: 'john doe',
+                      email: 'john.doe@example.com',
+                      password: 'SecurePass123!',
+                    },
+                    summary: 'Invalid username (contains space)',
+                  },
+                  invalidPassword: {
+                    value: {
+                      username: 'johndoe123',
+                      email: 'john.doe@example.com',
+                      password: 'weak',
+                    },
+                    summary: 'Invalid password (too short, missing requirements)',
                   },
                 },
               },
@@ -326,7 +455,7 @@ export function getSwaggerDocument() {
                     message: 'User registered successfully',
                     object: {
                       id: '123e4567-e89b-12d3-a456-426614174000',
-                      username: 'johndoe',
+                      username: 'johndoe123',
                       email: 'john.doe@example.com',
                       roleId: '123e4567-e89b-12d3-a456-426614174001',
                     },
@@ -348,8 +477,13 @@ export function getSwaggerDocument() {
                         success: false,
                         message: 'Validation failed',
                         object: null,
-                        errors: ['body.email: Invalid email', 'body.password: String must contain at least 6 character(s)'],
+                        errors: [
+                          'body.username: Username must be alphanumeric only (letters and numbers, no special characters or spaces)',
+                          'body.password: Password must be at least 8 characters long',
+                          'body.password: Password must include at least one uppercase letter (A-Z)',
+                        ],
                       },
+                      summary: 'Multiple validation errors',
                     },
                     emailExists: {
                       value: {
@@ -358,7 +492,242 @@ export function getSwaggerDocument() {
                         object: null,
                         errors: ['User with this email already exists'],
                       },
+                      summary: 'Email already registered',
                     },
+                    usernameTaken: {
+                      value: {
+                        success: false,
+                        message: 'Username already taken',
+                        object: null,
+                        errors: ['Username already taken'],
+                      },
+                      summary: 'Username already taken',
+                    },
+                    weakPassword: {
+                      value: {
+                        success: false,
+                        message: 'Validation failed',
+                        object: null,
+                        errors: [
+                          'body.password: Password must be at least 8 characters long',
+                          'body.password: Password must include at least one uppercase letter (A-Z)',
+                          'body.password: Password must include at least one special character (e.g., !@#$%^&*)',
+                        ],
+                      },
+                      summary: 'Password does not meet requirements',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/auth/login': {
+        post: {
+          tags: ['Authentication'],
+          summary: 'Login user',
+          description: 'Authenticate a user with email and password (rate limited to 100 requests / 15 minutes per IP). Upon success returns a JWT access token for subsequent requests.',
+          operationId: 'loginUser',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['email', 'password'],
+                  properties: {
+                    email: {
+                      type: 'string',
+                      format: 'email',
+                      example: 'john.doe@example.com',
+                      description: 'The email address used during registration',
+                    },
+                    password: {
+                      type: 'string',
+                      format: 'password',
+                      example: 'SecurePass123!',
+                      description: 'The user account password',
+                    },
+                  },
+                },
+                examples: {
+                  valid: {
+                    value: {
+                      email: 'john.doe@example.com',
+                      password: 'SecurePass123!',
+                    },
+                    summary: 'Valid login credentials',
+                  },
+                  invalidEmail: {
+                    value: {
+                      email: 'invalid-email',
+                      password: 'SecurePass123!',
+                    },
+                    summary: 'Invalid email format',
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Login successful - JWT token returned',
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/BaseResponse',
+                  },
+                  example: {
+                    success: true,
+                    message: 'Login successful',
+                    object: {
+                      user: {
+                        id: '123e4567-e89b-12d3-a456-426614174000',
+                        username: 'johndoe123',
+                        email: 'john.doe@example.com',
+                        roleId: '123e4567-e89b-12d3-a456-426614174001',
+                      },
+                      accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+                    },
+                    errors: null,
+                  },
+                },
+              },
+            },
+            '400': {
+              description: 'Bad Request - Invalid input format',
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/ErrorResponse',
+                  },
+                  example: {
+                    success: false,
+                    message: 'Validation failed',
+                    object: null,
+                    errors: ['body.email: Invalid email'],
+                  },
+                },
+              },
+            },
+            '401': {
+              description: 'Unauthorized - Invalid credentials (user does not exist or password is incorrect)',
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/ErrorResponse',
+                  },
+                  examples: {
+                    invalidCredentials: {
+                      value: {
+                        success: false,
+                        message: 'Invalid email or password',
+                        object: null,
+                        errors: ['Invalid email or password'],
+                      },
+                      summary: 'Invalid credentials',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/auth/me': {
+        get: {
+          tags: ['Authentication'],
+          summary: 'Get current user',
+          description: 'Returns the current authenticated user. Requires Bearer JWT in Authorization header.',
+          operationId: 'getCurrentUser',
+          security: [
+            {
+              bearerAuth: [],
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Current user returned',
+              content: {
+                'application/json': {
+                  schema: {
+                    $ref: '#/components/schemas/BaseResponse',
+                  },
+                  example: {
+                    success: true,
+                    message: 'User retrieved successfully',
+                    object: {
+                      id: '123e4567-e89b-12d3-a456-426614174000',
+                      username: 'johndoe123',
+                      email: 'john.doe@example.com',
+                      roleId: '123e4567-e89b-12d3-a456-426614174001',
+                    },
+                    errors: null,
+                  },
+                },
+              },
+            },
+            '401': {
+              description: 'Unauthorized - Missing/invalid token',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/auth/refresh': {
+        post: {
+          tags: ['Authentication'],
+          summary: 'Refresh access token',
+          description: 'Generate a new access token using a valid refresh token cookie.',
+          operationId: 'refreshToken',
+          responses: {
+            '200': {
+              description: 'New access token issued',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/BaseResponse' },
+                  example: {
+                    success: true,
+                    message: 'Token refreshed successfully',
+                    object: { accessToken: 'eyJhbGciOi...' },
+                    errors: null,
+                  },
+                },
+              },
+            },
+            '401': {
+              description: 'Unauthorized - Missing/invalid refresh token',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/auth/logout': {
+        post: {
+          tags: ['Authentication'],
+          summary: 'Logout',
+          description: 'Clears refresh token cookie.',
+          operationId: 'logout',
+          responses: {
+            '200': {
+              description: 'Logged out successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/BaseResponse' },
+                  example: {
+                    success: true,
+                    message: 'Logout successful',
+                    object: null,
+                    errors: null,
                   },
                 },
               },
@@ -483,12 +852,12 @@ export function getSwaggerDocument() {
         },
         get: {
           tags: ['Products'],
-          summary: 'List all products',
-          description: 'Retrieve a paginated list of all products',
+          summary: 'List/search products',
+          description: 'Retrieve a paginated list of products. Supports optional case-insensitive substring search by name using the "search" query param.',
           operationId: 'listProducts',
           parameters: [
             {
-              name: 'pageNumber',
+              name: 'page',
               in: 'query',
               description: 'Page number (default: 1)',
               required: false,
@@ -501,14 +870,49 @@ export function getSwaggerDocument() {
             {
               name: 'pageSize',
               in: 'query',
-              description: 'Number of items per page (default: 50)',
+              description: 'Number of items per page (default: 10)',
               required: false,
               schema: {
                 type: 'integer',
                 minimum: 1,
                 maximum: 100,
-                default: 50,
+                default: 10,
               },
+            },
+            {
+              name: 'search',
+              in: 'query',
+              description: 'Optional search term for product name (case-insensitive, substring match)',
+              required: false,
+              schema: { type: 'string' },
+            },
+            {
+              name: 'category',
+              in: 'query',
+              description: 'Filter by category (exact match)',
+              required: false,
+              schema: { type: 'string' },
+            },
+            {
+              name: 'minPrice',
+              in: 'query',
+              description: 'Filter products with price >= value',
+              required: false,
+              schema: { type: 'number', minimum: 0 },
+            },
+            {
+              name: 'maxPrice',
+              in: 'query',
+              description: 'Filter products with price <= value',
+              required: false,
+              schema: { type: 'number', minimum: 0 },
+            },
+            {
+              name: 'minStock',
+              in: 'query',
+              description: 'Filter products with stock >= value',
+              required: false,
+              schema: { type: 'integer', minimum: 0 },
             },
           ],
           responses: {
@@ -517,10 +921,90 @@ export function getSwaggerDocument() {
               content: {
                 'application/json': {
                   schema: {
-                    $ref: '#/components/schemas/PaginatedResponse',
+                    type: 'object',
+                    properties: {
+                      currentPage: { type: 'integer', example: 1 },
+                      pageSize: { type: 'integer', example: 10 },
+                      totalPages: { type: 'integer', example: 5 },
+                      totalProducts: { type: 'integer', example: 42 },
+                      products: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'string', format: 'uuid' },
+                            name: { type: 'string' },
+                            price: { type: 'number' },
+                            stock: { type: 'integer' },
+                            category: { type: 'string', nullable: true },
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },
+            },
+          },
+        },
+      },
+      '/api/products/{id}/image': {
+        post: {
+          tags: ['Products'],
+          summary: 'Upload product image (Admin only)',
+          description: 'Uploads a product image. Requires multipart/form-data with field `image`. Subject to write rate limiting.',
+          operationId: 'uploadProductImage',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  required: ['image'],
+                  properties: {
+                    image: {
+                      type: 'string',
+                      format: 'binary',
+                      description: 'Image file to upload',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'Image uploaded successfully',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/BaseResponse' },
+                },
+              },
+            },
+            '400': {
+              description: 'Bad Request - validation failure',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            '401': {
+              description: 'Unauthorized',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            '403': {
+              description: 'Forbidden',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
+            },
+            '404': {
+              description: 'Product not found',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } },
             },
           },
         },

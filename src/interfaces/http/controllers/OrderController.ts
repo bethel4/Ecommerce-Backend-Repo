@@ -1,16 +1,12 @@
 import { Response } from 'express';
 import { OrderRepository } from '../../../domain/repositories/OrderRepository';
-import { ProductRepository } from '../../../domain/repositories/ProductRepository';
 import { placeOrder } from '../../../application/use-cases/orders/placeOrder';
 import { listUserOrders } from '../../../application/use-cases/orders/listUserOrders';
 import { AuthRequest } from '../middlewares/authMiddleware';
-import { sendSuccess, sendError, sendPaginated } from '../utils/responseHelper';
+import { sendSuccess, sendError } from '../utils/responseHelper';
 
 export class OrderController {
-  constructor(
-    private orderRepo: OrderRepository,
-    private productRepo: ProductRepository
-  ) {}
+  constructor(private orderRepo: OrderRepository) {}
 
   async placeOrder(req: AuthRequest, res: Response) {
     try {
@@ -18,7 +14,7 @@ export class OrderController {
         return sendError(res, 'Unauthorized', null, 401);
       }
 
-      const result = await placeOrder(this.orderRepo, this.productRepo, {
+      const result = await placeOrder(this.orderRepo, {
         userId: req.user.userId,
         description: req.body.description,
         items: req.body.items,

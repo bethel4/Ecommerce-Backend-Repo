@@ -1,5 +1,13 @@
 import { ProductEntity } from '../entities/ProductEntity';
 
+export interface ProductFilters {
+  search?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minStock?: number;
+}
+
 export abstract class ProductRepository {
   abstract create(product: Omit<ProductEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProductEntity>;
   abstract findById(id: string): Promise<ProductEntity | null>;
@@ -7,6 +15,8 @@ export abstract class ProductRepository {
   abstract count(): Promise<number>;
   abstract search(query: string, limit?: number, offset?: number): Promise<ProductEntity[]>;
   abstract searchCount(query: string): Promise<number>;
+  abstract findFiltered(filters: ProductFilters, limit?: number, offset?: number): Promise<ProductEntity[]>;
+  abstract countFiltered(filters: ProductFilters): Promise<number>;
   abstract update(id: string, product: Partial<ProductEntity>): Promise<ProductEntity>;
   abstract delete(id: string): Promise<void>;
   abstract findByUserId(userId: string): Promise<ProductEntity[]>;

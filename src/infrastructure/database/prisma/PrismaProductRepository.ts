@@ -1,40 +1,10 @@
-import { ProductRepository } from '../../../domain/repositories/ProductRepository';
+import { Prisma } from '@prisma/client';
+import { ProductFilters, ProductRepository } from '../../../domain/repositories/ProductRepository';
 import { ProductEntity } from '../../../domain/entities/ProductEntity';
 import { prismaClient } from './prismaClient';
 
 export class PrismaProductRepository implements ProductRepository {
-  async create(product: Omit<ProductEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProductEntity> {
-    const created = await prismaClient.product.create({
-      data: {
-        name: product.name,
-        description: product.description,
-        price: product.price,
-        stock: product.stock,
-        category: product.category,
-        userId: product.userId,
-      },
-    });
-
-    return new ProductEntity(
-      created.id,
-      created.name,
-      created.description,
-      created.price,
-      created.stock,
-      created.category,
-      created.userId,
-      created.createdAt,
-      created.updatedAt
-    );
-  }
-
-  async findById(id: string): Promise<ProductEntity | null> {
-    const product = await prismaClient.product.findUnique({
-      where: { id },
-    });
-
-    if (!product) return null;
-
+  private toEntity(product: any): ProductEntity {
     return new ProductEntity(
       product.id,
       product.name,
@@ -44,31 +14,76 @@ export class PrismaProductRepository implements ProductRepository {
       product.category,
       product.userId,
       product.createdAt,
-      product.updatedAt
+      product.updatedAt,
+      product.imageUrl ?? null
     );
   }
 
-  async findAll(limit: number = 50, offset: number = 0): Promise<ProductEntity[]> {
-    const products = await prismaClient.product.findMany({
-      take: limit,
-      skip: offset,
-      orderBy: { createdAt: 'desc' },
+  private buildFilterWhere(filters: ProductFilters): Prisma.ProductWhereInput {
+    const conditions: Prisma.ProductWhereInput[] = [];
+
+    if (filters.search) {
+      conditions.push({
+        name: { contains: filters.search, mode: 'insensitive' },
+      });
+    }
+
+    if (filters.category) {
+      conditions.push({
+        category: filters.category,
+      });
+    }
+
+    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+      conditions.push({
+        price: {
+          ...(filters.minPrice !== undefined ? { gte: filters.minPrice } : {}),
+          ...(filters.maxPrice !== undefined ? { lte: filters.maxPrice } : {}),
+        },
+      });
+    }
+
+    if (filters.minStock !== undefined) {
+      conditions.push({
+        stock: { gte: filters.minStock },
+      });
+    }
+
+    if (conditions.length === 0) {
+      return {};
+    }
+
+    return { AND: conditions };
+  }
+
+  async create(product: Omit<ProductEntity, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProductEntity> {
+    const created = await prismaClient.product.create({
+      data: {
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: product.stock,
+        category: product.category,
+        userId: product.userId,
+        imageUrl: product.imageUrl ?? null,
+      },
     });
 
-    return products.map(
-      (p) =>
-        new ProductEntity(
-          p.id,
-          p.name,
-          p.description,
-          p.price,
-          p.stock,
-          p.category,
-          p.userId,
-          p.createdAt,
-          p.updatedAt
-        )
-    );
+    return this.toEntity(created);
+  }
+
+  async findById(id: string): Promise<ProductEntity | null> {
+    const product = await prismaClient.product.findUnique({
+      where: { id },
+    });
+
+    if (!product) return null;
+
+    return this.toEntity(product);
+  }
+
+  async findAll(limit: number = 50, offset: number = 0): Promise<ProductEntity[]> {
+    return this.findFiltered({}, limit, offset);
   }
 
   async count(): Promise<number> {
@@ -76,44 +91,27 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async search(query: string, limit: number = 50, offset: number = 0): Promise<ProductEntity[]> {
+    return this.findFiltered({ search: query }, limit, offset);
+  }
+
+  async searchCount(query: string): Promise<number> {
+    return this.countFiltered({ search: query });
+  }
+
+  async findFiltered(filters: ProductFilters, limit: number = 50, offset: number = 0): Promise<ProductEntity[]> {
     const products = await prismaClient.product.findMany({
-      where: {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-          { category: { contains: query, mode: 'insensitive' } },
-        ],
-      },
+      where: this.buildFilterWhere(filters),
       take: limit,
       skip: offset,
       orderBy: { createdAt: 'desc' },
     });
 
-    return products.map(
-      (p) =>
-        new ProductEntity(
-          p.id,
-          p.name,
-          p.description,
-          p.price,
-          p.stock,
-          p.category,
-          p.userId,
-          p.createdAt,
-          p.updatedAt
-        )
-    );
+    return products.map((p) => this.toEntity(p));
   }
 
-  async searchCount(query: string): Promise<number> {
+  async countFiltered(filters: ProductFilters): Promise<number> {
     return prismaClient.product.count({
-      where: {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-          { category: { contains: query, mode: 'insensitive' } },
-        ],
-      },
+      where: this.buildFilterWhere(filters),
     });
   }
 
@@ -126,20 +124,11 @@ export class PrismaProductRepository implements ProductRepository {
         ...(product.price && { price: product.price }),
         ...(product.stock !== undefined && { stock: product.stock }),
         ...(product.category !== undefined && { category: product.category }),
+        ...(product.imageUrl !== undefined && { imageUrl: product.imageUrl }),
       },
     });
 
-    return new ProductEntity(
-      updated.id,
-      updated.name,
-      updated.description,
-      updated.price,
-      updated.stock,
-      updated.category,
-      updated.userId,
-      updated.createdAt,
-      updated.updatedAt
-    );
+    return this.toEntity(updated);
   }
 
   async delete(id: string): Promise<void> {
@@ -154,20 +143,7 @@ export class PrismaProductRepository implements ProductRepository {
       orderBy: { createdAt: 'desc' },
     });
 
-    return products.map(
-      (p) =>
-        new ProductEntity(
-          p.id,
-          p.name,
-          p.description,
-          p.price,
-          p.stock,
-          p.category,
-          p.userId,
-          p.createdAt,
-          p.updatedAt
-        )
-    );
+    return products.map((p) => this.toEntity(p));
   }
 }
 

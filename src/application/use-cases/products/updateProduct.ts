@@ -17,6 +17,7 @@ export interface UpdateProductOutput {
   stock: number;
   category: string | null;
   userId: string;
+  imageUrl: string | null;
 }
 
 export async function updateProduct(
@@ -52,6 +53,7 @@ export async function updateProduct(
     stock: product.stock,
     category: product.category,
     userId: product.userId,
+    imageUrl: product.imageUrl ?? null,
   };
 }
 
