@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# Install dependencies required for Prisma
+RUN apk add --no-cache bash openssl libstdc++ libc6-compat
+
 WORKDIR /app
 
 # Copy package files
@@ -9,11 +12,11 @@ COPY prisma ./prisma/
 # Install dependencies
 RUN npm ci
 
-# Generate Prisma Client
-RUN npx prisma generate
-
 # Copy source code
 COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
 
 # Build TypeScript
 RUN npm run build
@@ -23,4 +26,3 @@ EXPOSE 3000
 
 # Start server
 CMD ["node", "dist/index.js"]
-
