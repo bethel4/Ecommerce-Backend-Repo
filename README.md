@@ -1,8 +1,8 @@
-# 🏗️ E-commerce Backend - Clean Architecture
+#  E-commerce Backend - Clean Architecture
 
 A production-ready e-commerce backend built with **Clean Architecture** principles, featuring Express.js, TypeScript, PostgreSQL, Prisma, and Redis.
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Overview](#overview)
 - [Architecture](#architecture)
@@ -17,7 +17,7 @@ A production-ready e-commerce backend built with **Clean Architecture** principl
 - [Prisma Migrations](#prisma-migrations)
 - [Testing](#testing)
 
-## 🎯 Overview
+##  Overview
 
 This project implements a clean, scalable backend architecture following **Clean Architecture** principles, ensuring:
 
@@ -27,7 +27,7 @@ This project implements a clean, scalable backend architecture following **Clean
 - **Maintainability**: Changes in one layer don't affect others
 - **Scalability**: Easy to add new features and modify existing ones
 
-## 🏛️ Architecture
+## Architecture
 
 ### Clean Architecture Layers
 
@@ -73,7 +73,7 @@ This project implements a clean, scalable backend architecture following **Clean
 - **Security**: Helmet, CORS, CSRF protection
 - **Containerization**: Docker & Docker Compose
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 src/
@@ -148,7 +148,7 @@ docker/
 └── docker-compose.yml
 ```
 
-## 🚀 Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 
@@ -236,7 +236,7 @@ docker-compose exec app npx prisma migrate deploy
 docker-compose exec app npm run prisma:seed
 ```
 
-## 🔐 Environment Variables
+## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -250,7 +250,7 @@ docker-compose exec app npm run prisma:seed
 | `NODE_ENV` | Environment mode | `development` |
 | `CSRF_SECRET` | CSRF token secret | Required |
 
-## 🔒 Security Features
+##  Security Features
 
 ### Authentication & Authorization
 
@@ -274,7 +274,7 @@ docker-compose exec app npm run prisma:seed
 3. Client includes token in `X-CSRF-Token` header for state-changing requests
 4. Server validates token matches cookie
 
-## 📡 API Endpoints
+##  API Endpoints
 
 ### Authentication
 
@@ -316,7 +316,7 @@ docker-compose exec app npm run prisma:seed
 - **Rate limiting** (`express-rate-limit`) on auth and write-heavy endpoints
 - **Comprehensive Swagger** docs at `/api-docs`
 
-## 🗄️ Prisma Migrations
+## Prisma Migrations
 
 ### Create Migration
 
@@ -342,7 +342,7 @@ npm run prisma:studio
 
 Opens Prisma Studio at `http://localhost:5555`
 
-## 🧪 Testing
+## Testing
 
 ```bash
 npm test        # Run Jest unit tests
@@ -370,7 +370,7 @@ Troubleshooting:
 - `table ... does not exist` → rerun migrations, rebuild Docker image (`docker-compose build --no-cache app`)
 - Swagger `Failed to fetch` → ensure server is running at `http://localhost:3000`, CORS origin matches, no mixed protocols.
 
-## 📊 Database Schema
+##  Database Schema
 
 ### Tables
 
@@ -388,7 +388,7 @@ Troubleshooting:
 - Order → OrderItem (one-to-many)
 - Product → OrderItem (one-to-many)
 
-## 🧪 Development
+##  Development
 
 ### Scripts
 
@@ -408,7 +408,7 @@ npm run prisma:studio    # Open Prisma Studio
 - ESLint recommended (add if needed)
 - Consistent code formatting
 
-## 🚢 Production Deployment
+## Production Deployment
 
 1. Set `NODE_ENV=production`
 2. Use strong, unique secrets for JWT and CSRF
@@ -418,11 +418,11 @@ npm run prisma:studio    # Open Prisma Studio
 6. Set up proper logging and monitoring
 7. Run migrations before starting: `npx prisma migrate deploy`
 
-## 📝 License
+##  License
 
 ISC
 
-## 🤝 Contributing
+##  Contributing
 
 This is a clean architecture template. Feel free to extend it with:
 
@@ -435,6 +435,4 @@ This is a clean architecture template. Feel free to extend it with:
 - WebSocket support
 
 ---
-
-**Built with ❤️ using Clean Architecture principles**
 
