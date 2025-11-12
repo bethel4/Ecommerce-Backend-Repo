@@ -7,6 +7,8 @@ import { roleMiddleware } from '../middlewares/roleMiddleware';
 import { cacheMiddleware } from '../middlewares/cacheMiddleware';
 import { RedisCacheService } from '../../../infrastructure/services/redisCacheService';
 import { JwtService } from '../../../infrastructure/services/jwtService';
+import multer from 'multer';
+import path from 'path';
 
 const createProductSchema = z.object({
   body: z.object({
@@ -43,6 +45,18 @@ const deleteProductSchema = z.object({
   }),
 });
 
+// Multer setup for image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(process.cwd(), 'uploads'));
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `product_${Date.now()}${ext}`);
+  },
+});
+const upload = multer({ storage });
+
 export function createProductRoutes(
   productController: ProductController,
   jwtService: JwtService,
@@ -76,8 +90,18 @@ export function createProductRoutes(
   router.put(
     '/:id',
     authMiddleware(jwtService),
+    roleMiddleware(['ADMIN']),
     validateMiddleware(updateProductSchema),
     productController.update.bind(productController)
+  );
+
+  // Image upload (Admin only)
+  router.post(
+    '/:id/image',
+    authMiddleware(jwtService),
+    roleMiddleware(['ADMIN']),
+    upload.single('image'),
+    productController.uploadImage.bind(productController)
   );
 
   router.delete(

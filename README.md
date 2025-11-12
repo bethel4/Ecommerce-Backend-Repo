@@ -12,8 +12,10 @@ A production-ready e-commerce backend built with **Clean Architecture** principl
 - [Running with Docker](#running-with-docker)
 - [Environment Variables](#environment-variables)
 - [Security Features](#security-features)
+- [Feature Highlights](#feature-highlights)
 - [API Endpoints](#api-endpoints)
 - [Prisma Migrations](#prisma-migrations)
+- [Testing](#testing)
 
 ## 🎯 Overview
 
@@ -276,31 +278,43 @@ docker-compose exec app npm run prisma:seed
 
 ### Authentication
 
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/logout` - Logout user
-- `GET /api/auth/me` - Get current user (protected)
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login user
+- `POST /auth/refresh` - Refresh access token (uses refresh cookie)
+- `POST /auth/logout` - Logout user (clears refresh cookie)
+- `GET /auth/me` - Get current user (protected)
 
 ### Products
 
-- `GET /api/products` - List all products (cached)
-- `GET /api/products/search?q=query` - Search products
+- `GET /api/products` - Paginated list (supports `page`, `pageSize`, `search`, `category`, `minPrice`, `maxPrice`, `minStock`)
 - `GET /api/products/:id` - Get product by ID
-- `POST /api/products` - Create product (protected)
-- `PUT /api/products/:id` - Update product (protected)
+- `POST /api/products` - Create product (admin only)
+- `PUT /api/products/:id` - Update product (admin only)
 - `DELETE /api/products/:id` - Delete product (admin only)
+- `POST /api/products/:id/image` - Upload product image (admin only, multipart/form-data)
 
 ### Orders
 
-- `POST /api/orders` - Place order (protected, CSRF required)
-- `GET /api/orders` - List user orders (protected)
+- `POST /api/orders` - Place order (protected, transactional, CSRF required)
+- `GET /api/orders` - List authenticated user's orders (protected)
 
 ### Utility
 
 - `GET /health` - Health check
 - `GET /api/csrf-token` - Get CSRF token
 - `GET /api-docs` - API documentation (Swagger)
+
+## 🔦 Feature Highlights
+
+- **Clean Architecture** boundary between HTTP, use cases, domain, and infrastructure
+- **JWT auth** with short-lived access tokens & refresh cookies
+- **Role-based access control** (USER vs ADMIN) enforced in middleware
+- **Paginated product listing** with optional case-insensitive search and filters (`category`, `minPrice`, `maxPrice`, `minStock`)
+- **Redis caching** for public product list/search (automatic invalidation on writes)
+- **Transactional order placement** (stock check + creation + stock update)
+- **Image uploads** via `multer`, served from `/uploads`
+- **Rate limiting** (`express-rate-limit`) on auth and write-heavy endpoints
+- **Comprehensive Swagger** docs at `/api-docs`
 
 ## 🗄️ Prisma Migrations
 
@@ -327,6 +341,34 @@ npm run prisma:studio
 ```
 
 Opens Prisma Studio at `http://localhost:5555`
+
+## 🧪 Testing
+
+```bash
+npm test        # Run Jest unit tests
+npm run test:watch
+```
+
+Unit tests are located in `tests/` and mock repository dependencies so use cases can be validated without a real database.
+
+### Manual / Swagger Testing
+
+1. Start the server: `npm run dev`
+2. Open Swagger UI at `http://localhost:3000/api-docs`
+3. Register → login → click **Authorize** and paste `Bearer <accessToken>`
+4. Exercise product and order flows (create/update/delete/list/search, place orders, view orders)
+5. For Admin-only endpoints, promote a user’s role in the database (`Role` table → ADMIN)
+
+### Database Migrations Recap
+
+- **Local:** `npm run prisma:migrate`
+- **Docker:** `docker-compose exec app npx prisma migrate deploy`
+- Reseed roles: `npm run prisma:seed`
+
+Troubleshooting:
+- `Invalid or expired token` → re-login, ensure `Authorization: Bearer <accessToken>`
+- `table ... does not exist` → rerun migrations, rebuild Docker image (`docker-compose build --no-cache app`)
+- Swagger `Failed to fetch` → ensure server is running at `http://localhost:3000`, CORS origin matches, no mixed protocols.
 
 ## 📊 Database Schema
 
@@ -385,7 +427,7 @@ ISC
 This is a clean architecture template. Feel free to extend it with:
 
 - Unit and integration tests
-- API rate limiting
+- API rate limiting (already included)
 - Request logging
 - Monitoring and observability
 - Additional use cases

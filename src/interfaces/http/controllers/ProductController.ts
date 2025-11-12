@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ProductRepository } from '../../../domain/repositories/ProductRepository';
+import { ProductFilters, ProductRepository } from '../../../domain/repositories/ProductRepository';
 import { createProduct } from '../../../application/use-cases/products/createProduct';
 import { updateProduct } from '../../../application/use-cases/products/updateProduct';
 import { listProducts } from '../../../application/use-cases/products/listProducts';
@@ -8,7 +8,7 @@ import { getProduct } from '../../../application/use-cases/products/getProduct';
 import { deleteProduct } from '../../../application/use-cases/products/deleteProduct';
 import { AuthRequest } from '../middlewares/authMiddleware';
 import { RedisCacheService } from '../../../infrastructure/services/redisCacheService';
-import { sendSuccess, sendError, sendPaginated } from '../utils/responseHelper';
+import { sendSuccess, sendError } from '../utils/responseHelper';
 
 export class ProductController {
   constructor(
@@ -61,28 +61,91 @@ export class ProductController {
     }
   }
 
+  async uploadImage(req: Request, res: Response) {
+    try {
+      if (!req.file) {
+        return sendError(res, 'Image file is required');
+      }
+      const imageUrl = `/uploads/${req.file.filename}`;
+      const updated = await this.productRepo.update(req.params.id, { imageUrl } as any);
+      sendSuccess(
+        res,
+        {
+          id: updated.id,
+          imageUrl: updated.imageUrl ?? imageUrl,
+        },
+        'Image uploaded successfully'
+      );
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  }
+
+  private async respondWithProductList(res: Response, filters: ProductFilters, currentPage: number, pageSize: number) {
+    const safePage = Math.max(currentPage, 1);
+    const safePageSize = Math.max(pageSize, 1);
+    const offset = (safePage - 1) * safePageSize;
+
+    const [products, totalProducts] = await Promise.all([
+      this.productRepo.findFiltered(filters, safePageSize, offset),
+      this.productRepo.countFiltered(filters),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(totalProducts / safePageSize));
+
+    const items = products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      stock: p.stock,
+      category: p.category,
+      imageUrl: p.imageUrl ?? null,
+    }));
+
+    res.status(200).json({
+      currentPage: safePage,
+      pageSize: safePageSize,
+      totalPages,
+      totalProducts,
+      products: items,
+    });
+  }
+
   async list(req: Request, res: Response) {
     try {
-      const pageNumber = req.query.pageNumber ? parseInt(req.query.pageNumber as string) : 1;
-      const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string) : 50;
-      const offset = (pageNumber - 1) * pageSize;
+      const currentPage = req.query.page ? parseInt(req.query.page as string) : 1;
+      const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string) : 10;
 
-      const [products, totalSize] = await Promise.all([
-        this.productRepo.findAll(pageSize, offset),
-        this.productRepo.count(),
-      ]);
+      const minPrice = req.query.minPrice !== undefined ? Number(req.query.minPrice) : undefined;
+      const maxPrice = req.query.maxPrice !== undefined ? Number(req.query.maxPrice) : undefined;
+      const minStock = req.query.minStock !== undefined ? Number(req.query.minStock) : undefined;
 
-      const productData = products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        price: p.price,
-        stock: p.stock,
-        category: p.category,
-        userId: p.userId,
-      }));
+      if (Number.isNaN(currentPage) || Number.isNaN(pageSize)) {
+        return sendError(res, 'Invalid pagination parameters');
+      }
+      if (
+        (minPrice !== undefined && Number.isNaN(minPrice)) ||
+        (maxPrice !== undefined && Number.isNaN(maxPrice)) ||
+        (minStock !== undefined && Number.isNaN(minStock))
+      ) {
+        return sendError(res, 'Invalid numeric filter parameter');
+      }
+      if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+        return sendError(res, 'minPrice cannot be greater than maxPrice');
+      }
+      if (minStock !== undefined && minStock < 0) {
+        return sendError(res, 'minStock must be non-negative');
+      }
 
-      sendPaginated(res, productData, pageNumber, pageSize, totalSize, 'Products retrieved successfully');
+      const filters: ProductFilters = {
+        search: req.query.search ? String(req.query.search) : undefined,
+        category: req.query.category ? String(req.query.category) : undefined,
+        minPrice,
+        maxPrice,
+        minStock,
+      };
+
+      await this.respondWithProductList(res, filters, currentPage, pageSize);
     } catch (error: any) {
       sendError(res, error.message, null, 500);
     }
@@ -90,31 +153,20 @@ export class ProductController {
 
   async search(req: Request, res: Response) {
     try {
-      const query = req.query.q as string;
-      if (!query) {
-        return sendError(res, 'Search query is required');
+      const qRaw = req.query.q ? String(req.query.q) : '';
+      const currentPage = req.query.page ? parseInt(req.query.page as string) : 1;
+      const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string) : 10;
+
+      if (Number.isNaN(currentPage) || Number.isNaN(pageSize)) {
+        return sendError(res, 'Invalid pagination parameters');
       }
 
-      const pageNumber = req.query.pageNumber ? parseInt(req.query.pageNumber as string) : 1;
-      const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string) : 50;
-      const offset = (pageNumber - 1) * pageSize;
+      const filters: ProductFilters = {};
+      if (qRaw.trim().length > 0) {
+        filters.search = qRaw.trim();
+      }
 
-      const [products, totalSize] = await Promise.all([
-        this.productRepo.search(query, pageSize, offset),
-        this.productRepo.searchCount(query),
-      ]);
-
-      const productData = products.map((p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        price: p.price,
-        stock: p.stock,
-        category: p.category,
-        userId: p.userId,
-      }));
-
-      sendPaginated(res, productData, pageNumber, pageSize, totalSize, 'Search completed successfully');
+      await this.respondWithProductList(res, filters, currentPage, pageSize);
     } catch (error: any) {
       sendError(res, error.message);
     }

@@ -1,13 +1,38 @@
+# Node
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
 dist/
-.env
-.env.local
-*.log
+build/
+
+# Environment files
+.env*
+!.env.example
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Editors / IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Testing
 coverage/
+
+# Prisma
 .prisma/
 
+# Docker
+docker-data/
+*.pid
+
+# Documentation (optional)
+.ARCHITECTURE.md
+.SWAGGER_TESTING_GUIDE.md

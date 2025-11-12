@@ -2,7 +2,7 @@ import { ProductRepository } from '../../../domain/repositories/ProductRepositor
 
 export interface CreateProductInput {
   name: string;
-  description?: string;
+  description: string;
   price: number;
   stock: number;
   category?: string;
@@ -17,6 +17,7 @@ export interface CreateProductOutput {
   stock: number;
   category: string | null;
   userId: string;
+  imageUrl: string | null;
 }
 
 export async function createProduct(
@@ -33,7 +34,7 @@ export async function createProduct(
 
   const product = await productRepo.create({
     name: input.name,
-    description: input.description || null,
+    description: input.description,
     price: input.price,
     stock: input.stock,
     category: input.category || null,
@@ -48,6 +49,7 @@ export async function createProduct(
     stock: product.stock,
     category: product.category,
     userId: product.userId,
+    imageUrl: product.imageUrl ?? null,
   };
 }
 

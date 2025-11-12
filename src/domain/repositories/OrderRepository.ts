@@ -5,5 +5,10 @@ export abstract class OrderRepository {
   abstract findById(id: string): Promise<OrderEntity | null>;
   abstract findByUserId(userId: string): Promise<OrderEntity[]>;
   abstract update(id: string, order: Partial<OrderEntity>): Promise<OrderEntity>;
+  // Place order atomically with stock checks and updates
+  abstract placeOrderTransactional(input: {
+    userId: string;
+    items: Array<{ productId: string; quantity: number }>;
+  }): Promise<OrderEntity>;
 }
 
