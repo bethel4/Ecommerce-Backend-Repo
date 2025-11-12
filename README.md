@@ -60,7 +60,7 @@ This project implements a clean, scalable backend architecture following **Clean
 3. **Infrastructure Layer**: External concerns (database, services, config)
 4. **Interface Layer**: HTTP controllers, routes, middlewares
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **Runtime**: Node.js 20
 - **Framework**: Express.js
