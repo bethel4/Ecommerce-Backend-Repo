@@ -1,0 +1,53 @@
+{
+  "name": "ecommerce-backend",
+  "version": "1.0.0",
+  "description": "Clean Architecture E-commerce Backend with Express.js, TypeScript, PostgreSQL, Prisma, and Redis",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "prisma:studio": "prisma studio"
+  },
+  "keywords": [
+    "express",
+    "typescript",
+    "clean-architecture",
+    "prisma",
+    "postgresql",
+    "redis"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "ioredis": "^5.3.2",
+    "jsonwebtoken": "^9.0.2",
+    "swagger-ui-express": "^5.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cookie-parser": "^1.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.6",
+    "@types/swagger-ui-express": "^4.1.6",
+    "nodemon": "^3.0.2",
+    "prisma": "^5.7.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  }
+}
